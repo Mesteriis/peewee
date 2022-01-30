@@ -90,10 +90,7 @@ class TestModelAPIs(ModelTestCase):
         return User.create(username=username)
 
     def add_tweets(self, user, *tweets):
-        accum = []
-        for tweet in tweets:
-            accum.append(Tweet.create(user=user, content=tweet))
-        return accum
+        return [Tweet.create(user=user, content=tweet) for tweet in tweets]
 
     @requires_models(Point)
     def test_no_primary_key(self):
@@ -1069,8 +1066,7 @@ class TestModelAPIs(ModelTestCase):
         names = []
         for name, count in sorted(name2count.items()):
             names += [name] * count
-        User.insert_many([(i, n) for i, n in enumerate(names, 1)],
-                         [User.id, User.username]).execute()
+        User.insert_many(list(enumerate(names, 1)), [User.id, User.username]).execute()
 
         # The results we are trying to obtain.
         expected = [

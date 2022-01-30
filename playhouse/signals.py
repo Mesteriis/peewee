@@ -45,11 +45,11 @@ class Signal(object):
 
     def send(self, instance, *args, **kwargs):
         sender = type(instance)
-        responses = []
-        for n, r, s in self._receiver_list:
-            if s is None or isinstance(instance, s):
-                responses.append((r, r(sender, instance, *args, **kwargs)))
-        return responses
+        return [
+            (r, r(sender, instance, *args, **kwargs))
+            for n, r, s in self._receiver_list
+            if s is None or isinstance(instance, s)
+        ]
 
 
 pre_save = Signal()

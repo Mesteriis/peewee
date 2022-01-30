@@ -285,12 +285,9 @@ class TestDatabase(DatabaseTestCase):
         db = PatchCommitDatabase(':memory:')
 
         def assertBatches(n_objs, batch_size, n_commits):
-            accum = []
             source = range(n_objs)
             db.commits = 0
-            for item in db.batch_commit(source, batch_size):
-                accum.append(item)
-
+            accum = list(db.batch_commit(source, batch_size))
             self.assertEqual(accum, list(range(n_objs)))
             self.assertEqual(db.commits, n_commits)
 
@@ -357,7 +354,7 @@ class TestThreadSafety(ModelTestCase):
     def test_multiple_readers(self):
         data = Queue()
         def read_user_count(n):
-            for i in range(n):
+            for _ in range(n):
                 data.put(User.select().count())
 
         threads = []
@@ -508,7 +505,7 @@ class TestIntrospection(ModelTestCase):
 
     def test_get_tables(self):
         tables = self.database.get_tables()
-        required = set(m._meta.table_name for m in self.requires)
+        required = {m._meta.table_name for m in self.requires}
         self.assertTrue(required.issubset(set(tables)))
 
         UniqueModel._schema.drop_all()

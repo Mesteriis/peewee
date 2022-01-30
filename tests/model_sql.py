@@ -500,24 +500,37 @@ class TestModelSQL(ModelDatabaseTestCase):
                                'WHERE ("t1"."last" = ?)'), ['cat'])
 
     def test_insert_returning(self):
+
         class TestDB(Database):
             returning_clause = True
 
-        class User(Model):
-            username = CharField()
+
+
+        class User((Model)):
+
+
             class Meta:
+                username = CharField()
                 database = TestDB(None)
+
+
 
         query = User.insert({User.username: 'zaizee'})
         self.assertSQL(query, (
             'INSERT INTO "user" ("username") '
             'VALUES (?) RETURNING "user"."id"'), ['zaizee'])
 
-        class Person(Model):
-            name = CharField()
-            ssn = CharField(primary_key=True)
+
+
+        class Person((Model)):
+
+
             class Meta:
+                name = CharField()
+                ssn = CharField(primary_key=True)
                 database = TestDB(None)
+
+
 
         query = Person.insert({Person.name: 'charlie', Person.ssn: '123'})
         self.assertSQL(query, (
@@ -536,16 +549,29 @@ class TestModelSQL(ModelDatabaseTestCase):
             'RETURNING "person"."ssn" AS "new_ssn"'), ['foo'])
 
     def test_insert_get_field_values(self):
-        class User(TestModel):
-            username = TextField(primary_key=True)
+
+
+
+        class User((TestModel)):
+
+
             class Meta:
+                username = TextField(primary_key=True)
                 database = self.database
 
-        class Tweet(TestModel):
-            user = ForeignKeyField(User)
-            content = TextField()
+
+
+
+
+        class Tweet((TestModel)):
+
+
             class Meta:
+                user = ForeignKeyField(User)
+                content = TextField()
                 database = self.database
+
+
 
         queries = (
             User.insert(username='a'),
@@ -580,16 +606,29 @@ class TestModelSQL(ModelDatabaseTestCase):
                                    ' VALUES (?, ?)'), ['a', 'ca'])
 
     def test_insert_many_get_field_values(self):
-        class User(TestModel):
-            username = TextField(primary_key=True)
+
+
+
+        class User((TestModel)):
+
+
             class Meta:
+                username = TextField(primary_key=True)
                 database = self.database
 
-        class Tweet(TestModel):
-            user = ForeignKeyField(User)
-            content = TextField()
+
+
+
+
+        class Tweet((TestModel)):
+
+
             class Meta:
+                user = ForeignKeyField(User)
+                content = TextField()
                 database = self.database
+
+
 
         # Ensure we can handle any combination of insert-data key and field
         # list value.

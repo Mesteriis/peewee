@@ -660,11 +660,7 @@ def query_to_string(query):
     # and this misuse could lead to sql injection vulnerabilities. This
     # function is intended for debugging or logging purposes ONLY.
     db = getattr(query, '_database', None)
-    if db is not None:
-        ctx = db.get_sql_context()
-    else:
-        ctx = Context()
-
+    ctx = db.get_sql_context() if db is not None else Context()
     sql, params = ctx.sql(query).query()
     if not params:
         return sql
@@ -745,9 +741,7 @@ class _DynamicColumn(object):
     __slots__ = ()
 
     def __get__(self, instance, instance_type=None):
-        if instance is not None:
-            return ColumnFactory(instance)  # Implements __getattr__().
-        return self
+        return ColumnFactory(instance) if instance is not None else self
 
 
 class _ExplicitColumn(object):
@@ -788,9 +782,7 @@ class Source(Node):
                    materialized=materialized)
 
     def get_sort_key(self, ctx):
-        if self._alias:
-            return (self._alias,)
-        return (ctx.alias_manager[self],)
+        return (self._alias, ) if self._alias else (ctx.alias_manager[self], )
 
     def apply_alias(self, ctx):
         # If we are defining the source, include the "AS alias" declaration. An
@@ -1029,7 +1021,7 @@ class ValuesList(_HashableSource, BaseTable):
         if self._alias:
             ctx.alias_manager[self] = self._alias
 
-        if ctx.scope == SCOPE_SOURCE or ctx.scope == SCOPE_NORMAL:
+        if ctx.scope in [SCOPE_SOURCE, SCOPE_NORMAL]:
             with ctx(parentheses=not ctx.parentheses):
                 ctx = (ctx
                        .literal('VALUES ')
@@ -1118,9 +1110,7 @@ class ColumnBase(Node):
         self._converter = converter
 
     def alias(self, alias):
-        if alias:
-            return Alias(self, alias)
-        return self
+        return Alias(self, alias) if alias else self
 
     def unalias(self):
         return self
@@ -1145,9 +1135,7 @@ class ColumnBase(Node):
         consisting of the left-hand and right-hand operands, using `op`.
         """
         def inner(self, rhs):
-            if inv:
-                return Expression(rhs, op, self)
-            return Expression(self, op, rhs)
+            return Expression(rhs, op, self) if inv else Expression(self, op, rhs)
         return inner
     __and__ = _e(OP.AND)
     __or__ = _e(OP.OR)
@@ -1262,9 +1250,8 @@ class Column(ColumnBase):
     def __sql__(self, ctx):
         if ctx.scope == SCOPE_VALUES:
             return ctx.sql(Entity(self.name))
-        else:
-            with ctx.scope_column():
-                return ctx.sql(self.source).literal('.').sql(Entity(self.name))
+        with ctx.scope_column():
+            return ctx.sql(self.source).literal('.').sql(Entity(self.name))
 
 
 class WrappedNode(ColumnBase):
@@ -1291,9 +1278,7 @@ class EntityFactory(object):
 class _DynamicEntity(object):
     __slots__ = ()
     def __get__(self, instance, instance_type=None):
-        if instance is not None:
-            return EntityFactory(instance._alias)  # Implements __getattr__().
-        return self
+        return EntityFactory(instance._alias) if instance is not None else self
 
 
 class Alias(WrappedNode):
@@ -1307,10 +1292,7 @@ class Alias(WrappedNode):
         return hash(self._alias)
 
     def alias(self, alias=None):
-        if alias is None:
-            return self.node
-        else:
-            return Alias(self.node, alias)
+        return self.node if alias is None else Alias(self.node, alias)
 
     def unalias(self):
         return self.node
@@ -1473,7 +1455,7 @@ class Expression(ColumnBase):
         with ctx(**overrides):
             # Postgresql reports an error for IN/NOT IN (), so convert to
             # the equivalent boolean expression.
-            op_in = self.op == OP.IN or self.op == OP.NOT_IN
+            op_in = self.op in [OP.IN, OP.NOT_IN]
             if op_in and ctx.as_new().parse(self.rhs)[0] == '()':
                 return ctx.literal('0 = 1' if self.op == OP.IN else '1 = 1')
 
@@ -1971,10 +1953,7 @@ class BaseQuery(Node):
         raise NotImplementedError
 
     def sql(self):
-        if self._database:
-            context = self._database.get_sql_context()
-        else:
-            context = Context()
+        context = self._database.get_sql_context() if self._database else Context()
         return context.parse(self)
 
     @database_required
@@ -1999,10 +1978,7 @@ class BaseQuery(Node):
 
     def __getitem__(self, value):
         self._ensure_execution()
-        if isinstance(value, slice):
-            index = value.stop
-        else:
-            index = value
+        index = value.stop if isinstance(value, slice) else value
         if index is not None:
             index = index + 1 if index >= 0 else 0
         self._cursor_wrapper.fill_cache(index)
@@ -2158,8 +2134,7 @@ class SelectBase(_HashableSource, Source, SelectQuery):
 
     @database_required
     def peek(self, database, n=1):
-        rows = self.execute(database)[:n]
-        if rows:
+        if rows := self.execute(database)[:n]:
             return rows[0] if n == 1 else rows
 
     @database_required
@@ -2361,7 +2336,7 @@ class Select(SelectBase):
 
     @Node.copy
     def window(self, *windows):
-        self._windows = windows if windows else None
+        self._windows = windows or None
 
     @Node.copy
     def for_update(self, for_update=True, of=None, nowait=None):
@@ -2458,13 +2433,13 @@ class _WriteQuery(Query):
     def __init__(self, table, returning=None, **kwargs):
         self.table = table
         self._returning = returning
-        self._return_cursor = True if returning else False
+        self._return_cursor = bool(returning)
         super(_WriteQuery, self).__init__(**kwargs)
 
     @Node.copy
     def returning(self, *returning):
         self._returning = returning
-        self._return_cursor = True if returning else False
+        self._return_cursor = bool(returning)
 
     def apply_returning(self, ctx):
         if self._returning:
@@ -2486,9 +2461,7 @@ class _WriteQuery(Query):
         return self._cursor_wrapper
 
     def handle_result(self, database, cursor):
-        if self._return_cursor:
-            return cursor
-        return database.rows_affected(cursor)
+        return cursor if self._return_cursor else database.rows_affected(cursor)
 
     def _set_table_alias(self, ctx):
         ctx.alias_manager[self.table] = self.table.__name__
@@ -2521,10 +2494,7 @@ class Update(_WriteQuery):
             expressions = []
             for k, v in sorted(self._update.items(), key=ctx.column_sort_key):
                 if not isinstance(v, Node):
-                    if isinstance(k, Field):
-                        v = k.to_value(v)
-                    else:
-                        v = Value(v, unpack=False)
+                    v = k.to_value(v) if isinstance(k, Field) else Value(v, unpack=False)
                 elif isinstance(v, Model) and isinstance(k, ForeignKeyField):
                     # NB: we want to ensure that when passed a model instance
                     # in the context of a foreign-key, we apply the fk-specific
@@ -3231,10 +3201,7 @@ class Database(_callable_context_manager):
                     # field object, to apply data-type conversions.
                     if isinstance(k, basestring):
                         k = getattr(query.table, k)
-                    if isinstance(k, Field):
-                        v = k.to_value(v)
-                    else:
-                        v = Value(v, unpack=False)
+                    v = k.to_value(v) if isinstance(k, Field) else Value(v, unpack=False)
                 else:
                     v = QualifiedNames(v)
                 updates.append(NodeList((ensure_entity(k), SQL('='), v)))
@@ -3319,8 +3286,7 @@ class Database(_callable_context_manager):
     def batch_commit(self, it, n):
         for group in chunked(it, n):
             with self.atomic():
-                for obj in group:
-                    yield obj
+                yield from group
 
     def table_exists(self, table_name, schema=None):
         if is_model(table_name):
@@ -3482,8 +3448,7 @@ class SqliteDatabase(Database):
                 self._pragmas = list(pragmas.items())
         elif permanent:
             raise ValueError('Cannot specify a permanent pragma without value')
-        row = self.execute_sql(sql).fetchone()
-        if row:
+        if row := self.execute_sql(sql).fetchone():
             return row[0]
 
     cache_size = __pragma__('cache_size')
@@ -3674,8 +3639,7 @@ class SqliteDatabase(Database):
                                   (schema, table))
         for row in cursor.fetchall():
             name = row[1]
-            is_unique = int(row[2]) == 1
-            if is_unique:
+            if is_unique := int(row[2]) == 1:
                 unique_indexes.add(name)
 
         # Retrieve the indexed columns.
@@ -4014,8 +3978,7 @@ class MySQLDatabase(Database):
     def _connect(self):
         if mysql is None:
             raise ImproperlyConfigured('MySQL driver not installed!')
-        conn = mysql.connect(db=self.database, **self.connect_params)
-        return conn
+        return mysql.connect(db=self.database, **self.connect_params)
 
     def _set_server_version(self, conn):
         try:
@@ -4152,10 +4115,7 @@ class MySQLDatabase(Database):
                     # field object, to apply data-type conversions.
                     if isinstance(k, basestring):
                         k = getattr(query.table, k)
-                    if isinstance(k, Field):
-                        v = k.to_value(v)
-                    else:
-                        v = Value(v, unpack=False)
+                    v = k.to_value(v) if isinstance(k, Field) else Value(v, unpack=False)
                 updates.append(NodeList((ensure_entity(k), SQL('='), v)))
 
         if updates:
@@ -4305,9 +4265,7 @@ class CursorWrapper(object):
         self.row_cache = []
 
     def __iter__(self):
-        if self.populated:
-            return iter(self.row_cache)
-        return ResultIterator(self)
+        return iter(self.row_cache) if self.populated else ResultIterator(self)
 
     def __getitem__(self, item):
         if isinstance(item, slice):
@@ -4318,7 +4276,7 @@ class CursorWrapper(object):
                 self.fill_cache(stop)
             return self.row_cache[item]
         elif isinstance(item, int):
-            self.fill_cache(item if item > 0 else 0)
+            self.fill_cache(max(item, 0))
             return self.row_cache[item]
         else:
             raise ValueError('CursorWrapper only supports integer and slice '

@@ -349,10 +349,7 @@ class TestScalarFunctions(BaseTestUDF):
 
         for params, expected in zip(vals, results):
             random.seed(1)
-            if len(params) == 3:
-                pstr = '?, ?, ?'
-            else:
-                pstr = '?, ?'
+            pstr = '?, ?, ?' if len(params) == 3 else '?, ?'
             self.assertEqual(
                 self.sql1('select randomrange(%s)' % pstr, *params),
                 expected)
@@ -443,7 +440,7 @@ class TestVirtualTableFunctions(ModelTestCase):
              'FROM user, regex_search(?, user.username) '
              'ORDER BY regex_search.match'),
             rgx)
-        self.assertEqual([row for row in results], [
+        self.assertEqual(list(results), [
             ('1234.56789', '1234'),
             ('hu3y17', '17'),
             ('zaizee2012', '2012'),

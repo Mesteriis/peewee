@@ -85,8 +85,7 @@ if __name__ == '__main__':
     for db in ('mysql', 'psql', 'crdb'):
         for key in ('host', 'port', 'user', 'password'):
             att_name = '_'.join((db, key))
-            value = getattr(options, att_name, None)
-            if value:
+            if value := getattr(options, att_name, None):
                 os.environ['PEEWEE_%s' % att_name.upper()] = value
 
     os.environ['PEEWEE_TEST_VERBOSITY'] = str(options.verbosity)

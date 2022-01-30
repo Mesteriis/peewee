@@ -167,8 +167,7 @@ class Operation(object):
 def operation(fn):
     @functools.wraps(fn)
     def inner(self, *args, **kwargs):
-        with_context = kwargs.pop('with_context', False)
-        if with_context:
+        if with_context := kwargs.pop('with_context', False):
             return fn(self, *args, **kwargs)
         return Operation(self, fn.__name__, *args, **kwargs)
     return inner
@@ -589,9 +588,7 @@ class MySQLMigrator(SchemaMigrator):
                         .literal(' MODIFY ')
                         .sql(column_def.sql(is_null=False)))
 
-        fk_objects = dict(
-            (fk.column, fk)
-            for fk in self.database.get_foreign_keys(table))
+        fk_objects = {fk.column: fk for fk in self.database.get_foreign_keys(table)}
         if column not in fk_objects:
             return add_not_null
 
@@ -616,9 +613,7 @@ class MySQLMigrator(SchemaMigrator):
 
     @operation
     def rename_column(self, table, old_name, new_name):
-        fk_objects = dict(
-            (fk.column, fk)
-            for fk in self.database.get_foreign_keys(table))
+        fk_objects = {fk.column: fk for fk in self.database.get_foreign_keys(table)}
         is_foreign_key = old_name in fk_objects
 
         column = self._get_column_definition(table, old_name)
@@ -688,8 +683,7 @@ class SqliteMigrator(SchemaMigrator):
 
     @operation
     def _update_column(self, table, column_to_update, fn):
-        columns = set(column.name.lower()
-                      for column in self.database.get_columns(table))
+        columns = {column.name.lower() for column in self.database.get_columns(table)}
         if column_to_update.lower() not in columns:
             raise ValueError('Column "%s" does not exist on "%s"' %
                              (column_to_update, table))
@@ -723,8 +717,7 @@ class SqliteMigrator(SchemaMigrator):
             column_name, = self.column_name_re.match(column_def).groups()
 
             if column_name == column_to_update:
-                new_column_def = fn(column_name, column_def)
-                if new_column_def:
+                if new_column_def := fn(column_name, column_def):
                     new_column_defs.append(new_column_def)
                     original_column_names.append(column_name)
                     column_name, = self.column_name_re.match(

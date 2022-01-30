@@ -236,7 +236,7 @@ class TestSchemaMigration(ModelTestCase):
 
     def get_column_names(self, tbl):
         cursor = self.database.execute_sql('select * from %s limit 1' % tbl)
-        return set([col[0] for col in cursor.description])
+        return {col[0] for col in cursor.description}
 
     def test_drop_column(self):
         self._create_people()
@@ -253,7 +253,7 @@ class TestSchemaMigration(ModelTestCase):
 
         column_names = self.get_column_names('users')
         self.assertEqual(column_names, set(['id']))
-        data = [row for row in User.select(User.id).order_by(User.id).tuples()]
+        data = list(User.select(User.id).order_by(User.id).tuples())
         self.assertEqual(data, [
             ('charlie',),
             ('huey',),])
@@ -469,7 +469,7 @@ class TestSchemaMigration(ModelTestCase):
     def test_add_and_remove(self):
         operations = []
         field = CharField(default='foo')
-        for i in range(10):
+        for _ in range(10):
             operations.append(self.migrator.add_column('tag', 'foo', field))
             operations.append(self.migrator.drop_column('tag', 'foo'))
 
@@ -928,7 +928,7 @@ class TestSqliteColumnNameRegression(ModelTestCase):
 
         BNT = Table('bad_names', ('id', 'primary_data', 'foreign_data',
                                   'new_data')).bind(self.database)
-        self.assertEqual([row for row in BNT.select()], [{
+        self.assertEqual(list(BNT.select()), [{
             'id': 1,
             'primary_data': 'pd',
             'foreign_data': 'fd',

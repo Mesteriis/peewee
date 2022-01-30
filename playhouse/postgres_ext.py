@@ -193,14 +193,13 @@ class ArrayField(IndexedFieldMixin, Field):
             return value if isinstance(value, list) else list(value)
 
     def python_value(self, value):
-        if self.convert_values and value is not None:
-            conv = self.__field.python_value
-            if isinstance(value, list):
-                return self._process(conv, value, self.dimensions)
-            else:
-                return conv(value)
-        else:
+        if not self.convert_values or value is None:
             return value
+        conv = self.__field.python_value
+        if isinstance(value, list):
+            return self._process(conv, value, self.dimensions)
+        else:
+            return conv(value)
 
     def _process(self, conv, value, dimensions):
         dimensions -= 1
@@ -409,8 +408,7 @@ class FetchManyCursor(object):
             rows = self.cursor.fetchmany(self.array_size)
             if not rows:
                 return
-            for row in rows:
-                yield row
+            yield from rows
 
     def fetchone(self):
         if self.exhausted:
@@ -448,8 +446,7 @@ def ServerSide(query, database=None, array_size=None):
         database = query._database
     with database.transaction():
         server_side_query = ServerSideQuery(query, array_size=array_size)
-        for row in server_side_query:
-            yield row
+        yield from server_side_query
 
 
 class _empty_object(object):

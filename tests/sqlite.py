@@ -54,9 +54,7 @@ class WeightedAverage(object):
         self.count += (weight * value)
 
     def finalize(self):
-        if self.total != 0.:
-            return self.count / self.total
-        return 0.
+        return self.count / self.total if self.total != 0. else 0.
 
 def _cmp(l, r):
     if l < r:
@@ -969,10 +967,7 @@ class TestFullTextSearch(BaseFTSTestCase, ModelTestCase):
         self.assertEqual([round(d.score, 2) for d in query], [-0.] * 5)
 
     def _test_fts_auto(self, ModelClass):
-        posts = []
-        for message in self.messages:
-            posts.append(Post.create(message=message))
-
+        posts = [Post.create(message=message) for message in self.messages]
         # Nothing matches, index is not built.
         pq = ModelClass.select().where(ModelClass.match('faith'))
         self.assertEqual(list(pq), [])
@@ -1756,9 +1751,7 @@ class TestTransitiveClosureIntegration(BaseTestCase):
         return Category, Closure
 
     def assertNodes(self, query, *expected):
-        self.assertEqual(
-            set([category.name for category in query]),
-            set(expected))
+        self.assertEqual({category.name for category in query}, set(expected))
 
     def test_build_tree(self):
         Category, Closure = self.initialize_models()
@@ -1981,10 +1974,10 @@ class TestLSM1Extension(BaseTestCase):
         self.assertEqual(v0_db.val_f, 3.14)
         self.assertEqual(v0_db.val_t, 'v2-e')
 
-        self.assertEqual(len([item for item in KV.select()]), 1)
+        self.assertEqual(len(list(KV.select())), 1)
 
         del KV['k0']
-        self.assertEqual(len([item for item in KV.select()]), 0)
+        self.assertEqual(len(list(KV.select())), 0)
 
     def test_insert_replace(self):
         database.create_tables([KVS])
