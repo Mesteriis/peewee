@@ -147,9 +147,7 @@ def register_all(db):
 # Scalar functions.
 @udf(CONTROL_FLOW)
 def if_then_else(cond, truthy, falsey=None):
-    if cond:
-        return truthy
-    return falsey
+    return truthy if cond else falsey
 
 @udf(DATE)
 def strip_tz(date_str):
@@ -220,8 +218,7 @@ else:
 
 @udf(HELPER)
 def hostname(url):
-    parse_result = urlparse(url)
-    if parse_result:
+    if parse_result := urlparse(url):
         return parse_result.netloc
 
 @udf(HELPER)
@@ -234,9 +231,8 @@ def toggle(key):
 def setting(key, value=None):
     if value is None:
         return SETTINGS.get(key)
-    else:
-        SETTINGS[key] = value
-        return value
+    SETTINGS[key] = value
+    return value
 
 @udf(HELPER)
 def clear_settings():
@@ -324,10 +320,9 @@ class mintdiff(_datetime_heap_agg):
     def finalize(self):
         dtp = min_diff = None
         while self.heap:
-            if min_diff is None:
-                if dtp is None:
-                    dtp = heapq.heappop(self.heap)
-                    continue
+            if min_diff is None and dtp is None:
+                dtp = heapq.heappop(self.heap)
+                continue
             dt = heapq.heappop(self.heap)
             diff = dt - dtp
             if min_diff is None or min_diff > diff:
@@ -347,10 +342,9 @@ class avgtdiff(_datetime_heap_agg):
         total = ct = 0
         dtp = None
         while self.heap:
-            if total == 0:
-                if dtp is None:
-                    dtp = heapq.heappop(self.heap)
-                    continue
+            if total == 0 and dtp is None:
+                dtp = heapq.heappop(self.heap)
+                continue
 
             dt = heapq.heappop(self.heap)
             diff = dt - dtp
@@ -412,10 +406,9 @@ class minrange(_heap_agg):
         prev = min_diff = None
 
         while self.heap:
-            if min_diff is None:
-                if prev is None:
-                    prev = heapq.heappop(self.heap)
-                    continue
+            if min_diff is None and prev is None:
+                prev = heapq.heappop(self.heap)
+                continue
             curr = heapq.heappop(self.heap)
             diff = curr - prev
             if min_diff is None or min_diff > diff:
@@ -434,10 +427,9 @@ class avgrange(_heap_agg):
         total = ct = 0
         prev = None
         while self.heap:
-            if total == 0:
-                if prev is None:
-                    prev = heapq.heappop(self.heap)
-                    continue
+            if total == 0 and prev is None:
+                prev = heapq.heappop(self.heap)
+                continue
 
             curr = heapq.heappop(self.heap)
             diff = curr - prev

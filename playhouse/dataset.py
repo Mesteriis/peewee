@@ -234,8 +234,7 @@ class Table(object):
         return [f.name for f in self.model_class._meta.sorted_fields]
 
     def _migrate_new_columns(self, data):
-        new_keys = set(data) - set(self.model_class._meta.fields)
-        if new_keys:
+        if new_keys := set(data) - set(self.model_class._meta.fields):
             operations = []
             for key in new_keys:
                 field_class = self._guess_field_type(data[key])
@@ -365,7 +364,7 @@ class CSVExporter(Exporter):
         tuples = self.query.tuples().execute()
         tuples.initialize()
         if header and getattr(tuples, 'columns', None):
-            writer.writerow([column for column in tuples.columns])
+            writer.writerow(list(tuples.columns))
         for row in tuples:
             writer.writerow(row)
 
@@ -422,10 +421,12 @@ class CSVImporter(Importer):
                 return count
 
             if self.strict:
-                header_fields = []
-                for idx, key in enumerate(header_keys):
-                    if key in self.columns:
-                        header_fields.append((idx, self.columns[key]))
+                header_fields = [
+                    (idx, self.columns[key])
+                    for idx, key in enumerate(header_keys)
+                    if key in self.columns
+                ]
+
             else:
                 header_fields = list(enumerate(header_keys))
         else:

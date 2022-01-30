@@ -800,7 +800,7 @@ class TestSelectQuery(BaseTestCase):
 
     def test_where_convert_to_is_null(self):
         Note = Table('notes', ('id', 'content', 'user_id'))
-        query = Note.select().where(Note.user_id == None)
+        query = Note.select().where(Note.user_id is None)
         self.assertSQL(query, (
             'SELECT "t1"."id", "t1"."content", "t1"."user_id" '
             'FROM "notes" AS "t1" WHERE ("t1"."user_id" IS ?)'), [None])

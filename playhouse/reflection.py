@@ -430,23 +430,23 @@ class SqliteMetadata(Metadata):
     def _map_col(self, column_type):
         raw_column_type = column_type.lower()
         if raw_column_type in self.column_map:
-            field_class = self.column_map[raw_column_type]
+            return self.column_map[raw_column_type]
         elif re.search(self.re_varchar, raw_column_type):
-            field_class = CharField
+            return CharField
         else:
             column_type = re.sub('\(.+\)', '', raw_column_type)
-            if column_type == '':
-                field_class = BareField
-            else:
-                field_class = self.column_map.get(column_type, UnknownField)
-        return field_class
+            return (
+                BareField
+                if column_type == ''
+                else self.column_map.get(column_type, UnknownField)
+            )
 
     def get_column_types(self, table, schema=None):
-        column_types = {}
         columns = self.database.get_columns(table)
 
-        for column in columns:
-            column_types[column.name] = self._map_col(column.data_type)
+        column_types = {
+            column.name: self._map_col(column.data_type) for column in columns
+        }
 
         return column_types, {}
 
@@ -471,11 +471,11 @@ class DatabaseMetadata(_DatabaseMetadata):
         return accum
 
     def column_indexes(self, table):
-        accum = {}
-        for index in self.indexes[table]:
-            if len(index.columns) == 1:
-                accum[index.columns[0]] = index.unique
-        return accum
+        return {
+            index.columns[0]: index.unique
+            for index in self.indexes[table]
+            if len(index.columns) == 1
+        }
 
 
 class Introspector(object):
@@ -597,9 +597,8 @@ class Introspector(object):
 
             # Collect sets of all the column names as well as all the
             # foreign-key column names.
-            lower_col_names = set(column_name.lower()
-                                  for column_name in table_columns)
-            fks = set(fk_col.column for fk_col in foreign_keys[table])
+            lower_col_names = {column_name.lower() for column_name in table_columns}
+            fks = {fk_col.column for fk_col in foreign_keys[table]}
 
             for col_name, column in table_columns.items():
                 if literal_column_names:
@@ -691,11 +690,12 @@ class Introspector(object):
                 if dest not in models and dest != table:
                     _create_model(dest, models)
 
-            primary_keys = []
             columns = database.columns[table]
-            for column_name, column in columns.items():
-                if column.primary_key:
-                    primary_keys.append(column.name)
+            primary_keys = [
+                column.name
+                for column_name, column in columns.items()
+                if column.primary_key
+            ]
 
             multi_column_indexes = database.multi_column_indexes(table)
             column_indexes = database.column_indexes(table)
@@ -706,7 +706,7 @@ class Introspector(object):
 
             # Fix models with multi-column primary keys.
             composite_key = False
-            if len(primary_keys) == 0:
+            if not primary_keys:
                 primary_keys = columns.keys()
             if len(primary_keys) > 1:
                 Meta.primary_key = CompositeKey(*[
@@ -717,20 +717,23 @@ class Introspector(object):
             attrs = {'Meta': Meta}
             for column_name, column in columns.items():
                 FieldClass = column.field_class
-                if FieldClass is not ForeignKeyField and bare_fields:
+                if (
+                    FieldClass is not ForeignKeyField
+                    and bare_fields
+                    or FieldClass is UnknownField
+                ):
                     FieldClass = BareField
-                elif FieldClass is UnknownField:
-                    FieldClass = BareField
-
                 params = {
                     'column_name': column_name,
                     'null': column.nullable}
-                if column.primary_key and composite_key:
-                    if FieldClass is AutoField:
-                        FieldClass = IntegerField
-                    params['primary_key'] = False
-                elif column.primary_key and FieldClass is not AutoField:
-                    params['primary_key'] = True
+                if composite_key:
+                    if column.primary_key:
+                        if FieldClass is AutoField:
+                            FieldClass = IntegerField
+                        params['primary_key'] = False
+                elif FieldClass is not AutoField:
+                    if column.primary_key:
+                        params['primary_key'] = True
                 if column.is_foreign_key():
                     if column.is_self_referential_fk():
                         params['model'] = 'self'

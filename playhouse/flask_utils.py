@@ -175,10 +175,9 @@ class FlaskDB(object):
             raise RuntimeError('DATABASE configuration must specify a '
                                '`name` and `engine`.')
 
-        if '.' in engine:
-            path, class_name = engine.rsplit('.', 1)
-        else:
-            path, class_name = 'peewee', engine
+        path, class_name = (
+            engine.rsplit('.', 1) if '.' in engine else ('peewee', engine)
+        )
 
         try:
             __import__(path)

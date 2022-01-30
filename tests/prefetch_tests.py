@@ -88,9 +88,7 @@ class TestPrefetch(ModelTestCase):
         for person in query:
             notes = []
             for note in person.notes:
-                items = []
-                for item in note.items:
-                    items.append(item.content)
+                items = [item.content for item in note.items]
                 if sort_items:
                     items.sort()
                 notes.append((note.content, items))
@@ -346,12 +344,8 @@ class TestPrefetch(ModelTestCase):
             query = prefetch(people, notes, (likes, Person))
             accum = []
             for person in query:
-                likes = []
-                notes = []
-                for note in person.notes:
-                    notes.append(note.content)
-                for like in person.likes:
-                    likes.append(like.note.content)
+                notes = [note.content for note in person.notes]
+                likes = [like.note.content for like in person.likes]
                 accum.append((person.name, notes, likes))
 
         self.assertEqual(accum, [
@@ -460,9 +454,7 @@ class TestPrefetch(ModelTestCase):
             query = prefetch(people, likes, notes)
             accum = []
             for person in query:
-                liked_notes = []
-                for like in person.likes:
-                    liked_notes.append(like.note.content)
+                liked_notes = [like.note.content for like in person.likes]
                 accum.append((person.name, liked_notes))
 
         self.assertEqual(accum, [

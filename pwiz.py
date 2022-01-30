@@ -36,9 +36,9 @@ DATABASE_ALIASES = {
     SqliteDatabase: ['sqlite', 'sqlite3'],
 }
 
-DATABASE_MAP = dict((value, key)
-                    for key in DATABASE_ALIASES
-                    for value in DATABASE_ALIASES[key])
+DATABASE_MAP = {
+    value: key for key in DATABASE_ALIASES for value in DATABASE_ALIASES[key]
+}
 
 def make_introspector(database_type, database_name, **kwargs):
     if database_type not in DATABASE_MAP:
@@ -94,12 +94,14 @@ def print_models(introspector, tables=None, preserve_order=False,
             columns = sorted(columns)
         primary_keys = database.primary_keys[table]
         for name, column in columns:
-            skip = all([
-                name in primary_keys,
-                name == 'id',
-                len(primary_keys) == 1,
-                column.field_class in introspector.pk_classes])
-            if skip:
+            if skip := all(
+                [
+                    name in primary_keys,
+                    name == 'id',
+                    len(primary_keys) == 1,
+                    column.field_class in introspector.pk_classes,
+                ]
+            ):
                 continue
             if column.primary_key and len(primary_keys) > 1:
                 # If we have a CompositeKey, then we do not want to explicitly
@@ -116,8 +118,7 @@ def print_models(introspector, tables=None, preserve_order=False,
         print_('')
         print_('    class Meta:')
         print_('        table_name = \'%s\'' % table)
-        multi_column_indexes = database.multi_column_indexes(table)
-        if multi_column_indexes:
+        if multi_column_indexes := database.multi_column_indexes(table):
             print_('        indexes = (')
             for fields, unique in sorted(multi_column_indexes):
                 print_('            ((%s), %s),' % (
@@ -190,7 +191,7 @@ def get_option_parser():
 
 def get_connect_kwargs(options):
     ops = ('host', 'port', 'user', 'schema')
-    kwargs = dict((o, getattr(options, o)) for o in ops if getattr(options, o))
+    kwargs = {o: getattr(options, o) for o in ops if getattr(options, o)}
     if options.password:
         kwargs['password'] = getpass()
     return kwargs

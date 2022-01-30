@@ -463,10 +463,7 @@ class TestManyToMany(ModelTestCase):
 
     def test_manual_through(self):
         gargie, huey, mickey, zaizee = User.select().order_by(User.username)
-        alt_notes = []
-        for i in range(5):
-            alt_notes.append(AltNote.create(text='note-%s' % (i + 1)))
-
+        alt_notes = [AltNote.create(text='note-%s' % (i + 1)) for i in range(5)]
         self.assertNotes(gargie.altnotes, [])
         for alt_note in alt_notes:
             self.assertUsers(alt_note.users, [])

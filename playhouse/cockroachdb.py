@@ -182,9 +182,10 @@ class CockroachDatabase(PostgresqlDatabase):
 
 class _crdb_atomic(_atomic):
     def __enter__(self):
-        if self.db.transaction_depth() > 0:
-            if not isinstance(self.db.top_transaction(), _manual):
-                raise NotImplementedError(TXN_ERR_MSG)
+        if self.db.transaction_depth() > 0 and not isinstance(
+            self.db.top_transaction(), _manual
+        ):
+            raise NotImplementedError(TXN_ERR_MSG)
         return super(_crdb_atomic, self).__enter__()
 
 

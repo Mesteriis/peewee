@@ -98,9 +98,10 @@ class TestModelDDL(ModelDatabaseTestCase):
         self.assertEqual([sql] + indexes, expected)
 
     def assertIndexes(self, model_class, expected):
-        indexes = []
-        for create_index in model_class._schema._create_indexes(False):
-            indexes.append(create_index.query())
+        indexes = [
+            create_index.query()
+            for create_index in model_class._schema._create_indexes(False)
+        ]
 
         self.assertEqual(indexes, expected)
 
@@ -359,15 +360,22 @@ class TestModelDDL(ModelDatabaseTestCase):
             ('CREATE TABLE "skv" ("key" TEXT NOT NULL PRIMARY KEY) STRICT')])
 
     def test_db_table(self):
+
         class A(TestModel):
             class Meta:
                 database = self.database
                 db_table = 'A_tbl'
-        class B(TestModel):
-            a = ForeignKeyField(A, backref='bs')
+
+
+        class B((TestModel)):
+
+
             class Meta:
+                a = ForeignKeyField(A, backref='bs')
                 database = self.database
                 db_table = 'B_tbl'
+
+
         self.assertCreateTable(A, [
             'CREATE TABLE "A_tbl" ("id" INTEGER NOT NULL PRIMARY KEY)'])
         self.assertCreateTable(B, [
@@ -561,15 +569,22 @@ class TestModelDDL(ModelDatabaseTestCase):
             '"c123456789012345678901234567890")'), [])
 
     def test_fk_non_pk_ddl(self):
-        class A(Model):
+
+
+
+        class A((Model)):
             cf = CharField(max_length=100, unique=True)
-            df = DecimalField(
-                max_digits=4,
-                decimal_places=2,
-                auto_round=True,
-                unique=True)
+
+
             class Meta:
+                df = DecimalField(
+                    max_digits=4,
+                    decimal_places=2,
+                    auto_round=True,
+                    unique=True)
                 database = self.database
+
+
 
         class CF(TestModel):
             a = ForeignKeyField(A, field='cf')
@@ -596,17 +611,30 @@ class TestModelDDL(ModelDatabaseTestCase):
             'FOREIGN KEY ("a_id") REFERENCES "a" ("df"))'))
 
     def test_deferred_foreign_key(self):
-        class Language(TestModel):
+
+
+
+        class Language((TestModel)):
             name = CharField()
-            selected_snippet = DeferredForeignKey('Snippet', null=True)
+
+
             class Meta:
+                selected_snippet = DeferredForeignKey('Snippet', null=True)
                 database = self.database
 
-        class Snippet(TestModel):
+
+
+
+
+        class Snippet((TestModel)):
             code = TextField()
-            language = ForeignKeyField(Language, backref='snippets')
+
+
             class Meta:
+                language = ForeignKeyField(Language, backref='snippets')
                 database = self.database
+
+
 
         self.assertEqual(Snippet._meta.fields['language'].rel_model, Language)
         self.assertEqual(Language._meta.fields['selected_snippet'].rel_model,
@@ -636,11 +664,17 @@ class TestModelDDL(ModelDatabaseTestCase):
             '"fk_language_selected_snippet_id_refs_snippet" '
             'FOREIGN KEY ("selected_snippet_id") REFERENCES "snippet" ("id")'))
 
-        class SnippetComment(TestModel):
+
+
+        class SnippetComment((TestModel)):
             snippet_long_foreign_key_identifier = ForeignKeyField(Snippet)
-            comment = TextField()
+
+
             class Meta:
+                comment = TextField()
                 database = self.database
+
+
 
         sql, params = SnippetComment._schema._create_table(safe=True).query()
         self.assertEqual(sql, (

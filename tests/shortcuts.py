@@ -650,7 +650,7 @@ class TestResolveMultiModelQuery(ModelTestCase):
         mmb = MMB.select(MMB.key, Value(99).alias('value'))
         mmc = MMC.select(MMC.key, MMC.value)
         query = (mma | mmb | mmc).order_by(SQL('1'))
-        data = [obj for obj in resolve_multimodel_query(query)]
+        data = list(resolve_multimodel_query(query))
 
         expected = [
             MMA(key='k0', value=0), MMA(key='k1', value=1),

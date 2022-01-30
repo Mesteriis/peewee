@@ -268,7 +268,7 @@ class TestDataSet(ModelTestCase):
         self.assertEqual(len(user), 5)
 
         # __iter__()
-        users = sorted([u for u in user], key=operator.itemgetter('username'))
+        users = sorted(list(user), key=operator.itemgetter('username'))
         self.assertEqual(users[0], {'username': 'charlie'})
         self.assertEqual(users[-1], {'username': 'zaizee'})
 

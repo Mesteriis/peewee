@@ -258,9 +258,11 @@ class TestDateFields(ModelTestCase):
             date_time=datetime.datetime(2001, 2, 3, 4, 5, 6, 7),
             date=datetime.date(2002, 3, 4))
 
-        accum = []
-        for p in ('year', 'month', 'day', 'hour', 'minute', 'second'):
-            accum.append(DateModel.date_time.truncate(p))
+        accum = [
+            DateModel.date_time.truncate(p)
+            for p in ('year', 'month', 'day', 'hour', 'minute', 'second')
+        ]
+
         for p in ('year', 'month', 'day'):
             accum.append(DateModel.date.truncate(p))
 
@@ -312,7 +314,7 @@ class TestDateFields(ModelTestCase):
     def test_distinct_date_part(self):
         years = (1980, 1990, 2000, 2010)
         for i, year in enumerate(years):
-            for j in range(i + 1):
+            for _ in range(i + 1):
                 DateModel.create(date=datetime.date(year, i + 1, 1))
 
         query = (DateModel
@@ -1352,7 +1354,7 @@ class TestForeignKeyLazyLoad(ModelTestCase):
         # If we explicitly / eagerly select lazy foreign-key models, they
         # behave just like regular foreign keys.
         with self.assertQueryCount(1):
-            ai, bi = [ni for ni in query]
+            ai, bi = list(query)
             self.assertEqual(ai.nq.name, 'a1')
             self.assertEqual(ai.nq_null.name, 'a2')
             self.assertEqual(ai.nq_lazy.name, 'a3')

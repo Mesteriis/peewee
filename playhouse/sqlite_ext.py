@@ -86,10 +86,7 @@ class JSONPath(ColumnBase):
         return Value('$%s' % ''.join(self._path))
 
     def __getitem__(self, idx):
-        if isinstance(idx, int):
-            item = '[%s]' % idx
-        else:
-            item = '.%s' % idx
+        item = '[%s]' % idx if isinstance(idx, int) else '.%s' % idx
         return JSONPath(self._field, self._path + (item,))
 
     def set(self, value, as_json=None):
@@ -401,10 +398,8 @@ class FTSModel(BaseFTSModel):
         else:
             rank = score_fn(*weights)
 
-        selection = ()
         order_by = rank
-        if with_score:
-            selection = (cls, rank.alias(score_alias))
+        selection = (cls, rank.alias(score_alias)) if with_score else ()
         if with_score and not explicit_ordering:
             order_by = SQL(score_alias)
 
@@ -467,7 +462,7 @@ _alphanum = (set('\t ,"(){}*:_+0123456789') |
              set(_alphabet) |
              set(_alphabet.upper()) |
              set((chr(26),)))
-_invalid_ascii = set(chr(p) for p in range(128) if chr(p) not in _alphanum)
+_invalid_ascii = {chr(p) for p in range(128) if chr(p) not in _alphanum}
 _quote_re = re.compile(r'(?:[^\s"]|"(?:\\.|[^"])*")+')
 
 
@@ -600,8 +595,7 @@ class FTS5Model(BaseFTSModel):
                 accum.append(token)
                 continue
             token_set = set(token)
-            invalid_for_token = token_set & _invalid_ascii
-            if invalid_for_token:
+            if invalid_for_token := token_set & _invalid_ascii:
                 any_invalid = True
                 for c in invalid_for_token:
                     token = token.replace(c, replace)
@@ -644,19 +638,18 @@ class FTS5Model(BaseFTSModel):
         if not weights:
             rank = SQL('rank')
         elif isinstance(weights, dict):
-            weight_args = []
-            for field in cls._meta.sorted_fields:
-                if isinstance(field, SearchField) and not field.unindexed:
-                    weight_args.append(
-                        weights.get(field, weights.get(field.name, 1.0)))
+            weight_args = [
+                weights.get(field, weights.get(field.name, 1.0))
+                for field in cls._meta.sorted_fields
+                if isinstance(field, SearchField) and not field.unindexed
+            ]
+
             rank = fn.bm25(cls._meta.entity, *weight_args)
         else:
             rank = fn.bm25(cls._meta.entity, *weights)
 
-        selection = ()
         order_by = rank
-        if with_score:
-            selection = (cls, rank.alias(score_alias))
+        selection = (cls, rank.alias(score_alias)) if with_score else ()
         if with_score and not explicit_ordering:
             order_by = SQL(score_alias)
 
@@ -856,9 +849,8 @@ class LSMTable(VirtualModel):
         if not filename:
             raise ValueError('LSM1 extension requires that you specify a '
                              'filename for the LSM database.')
-        else:
-            if len(filename) >= 2 and filename[0] != '"':
-                filename = '"%s"' % filename
+        if len(filename) >= 2 and filename[0] != '"':
+            filename = '"%s"' % filename
         if not cls._meta.primary_key:
             raise ValueError('LSM1 models must specify a primary-key field.')
 
@@ -918,20 +910,17 @@ class LSMTable(VirtualModel):
             cls._meta.primary_key,
             pk)
 
-        if is_single:
-            row = query.get()
-            return row[1] if cls._meta._value_field is not None else row
-        else:
+        if not is_single:
             return query
+        row = query.get()
+        return row[1] if cls._meta._value_field is not None else row
 
     @classmethod
     def set_by_id(cls, key, value):
         if cls._meta._value_field is not None:
             data = {cls._meta._value_field: value}
         elif isinstance(value, tuple):
-            data = {}
-            for field, fval in zip(cls._meta.sorted_fields[1:], value):
-                data[field] = fval
+            data = dict(zip(cls._meta.sorted_fields[1:], value))
         elif isinstance(value, dict):
             data = value
         elif isinstance(value, cls):
@@ -1161,10 +1150,9 @@ def _parse_match_info(buf):
 def get_weights(ncol, raw_weights):
     if not raw_weights:
         return [1] * ncol
-    else:
-        weights = [0] * ncol
-        for i, weight in enumerate(raw_weights):
-            weights[i] = weight
+    weights = [0] * ncol
+    for i, weight in enumerate(raw_weights):
+        weights[i] = weight
     return weights
 
 # Ranking implementation, which parse matchinfo.

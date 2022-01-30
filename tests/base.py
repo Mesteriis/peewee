@@ -31,8 +31,12 @@ def db_loader(engine, name='peewee_test', db_class=None, **params):
             MariaDBConnectorDatabase: ['mariadb', 'maridbconnector'],
             CockroachDatabase: ['cockroach', 'cockroachdb', 'crdb'],
         }
-        engine_map = dict((alias, db) for db, aliases in engine_aliases.items()
-                          for alias in aliases)
+        engine_map = {
+            alias: db
+            for db, aliases in engine_aliases.items()
+            for alias in aliases
+        }
+
         if engine.lower() not in engine_map:
             raise Exception('Unsupported engine: %s.' % engine)
         db_class = engine_map[engine.lower()]
@@ -65,8 +69,7 @@ def make_db_params(key):
     env_vars = [(part, 'PEEWEE_%s_%s' % (key, part.upper()))
                 for part in ('host', 'port', 'user', 'password')]
     for param, env_var in env_vars:
-        value = os.environ.get(env_var)
-        if value:
+        if value := os.environ.get(env_var):
             params[param] = int(value) if param == 'port' else value
     return params
 

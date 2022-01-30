@@ -78,9 +78,9 @@ class Hexastore(object):
 
         for var, fields in binds.items():
             selection.append(fields[0].alias(var.name))
-            pairwise = [(fields[i - 1] == fields[i])
-                        for i in range(1, len(fields))]
-            if pairwise:
+            if pairwise := [
+                (fields[i - 1] == fields[i]) for i in range(1, len(fields))
+            ]:
                 accum.append(reduce(operator.and_, pairwise))
             sources.update([field.source for field in fields])
 

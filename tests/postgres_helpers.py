@@ -173,9 +173,7 @@ class BaseBinaryJsonFieldTestCase(BaseJsonFieldTestCase):
             list(range(5, 15)),
             ['k4', 'k1']]
 
-        self._bjson_objects = []
-        for json_value in data:
-            self._bjson_objects.append(self.M.create(data=json_value))
+        self._bjson_objects = [self.M.create(data=json_value) for json_value in data]
 
     def assertObjects(self, expr, *indexes):
         query = (self.M

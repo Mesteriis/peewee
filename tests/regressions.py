@@ -496,10 +496,9 @@ class BaseVersionedModel(TestModel):
             # a new version. How you handle this situation is up to you,
             # but for simplicity I'm just raising an exception.
             raise ConflictDetectedException()
-        else:
-            # Increment local version to match what is now in the db.
-            self.version += 1
-            return True
+        # Increment local version to match what is now in the db.
+        self.version += 1
+        return True
 
 class VUser(BaseVersionedModel):
     username = TextField()
@@ -1628,7 +1627,7 @@ class TestBulkUpdateAllNull(ModelTestCase):
         NDF.bulk_update(rows, fields=['date'])
 
         query = NDF.select().order_by(NDF.key).tuples()
-        self.assertEqual([r for r in query], [('n1', None), ('n2', None)])
+        self.assertEqual(list(query), [('n1', None), ('n2', None)])
 
 
 class CQA(TestModel):

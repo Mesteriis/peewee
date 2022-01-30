@@ -166,10 +166,7 @@ def after_request(response):
 def homepage():
     # depending on whether the requesting user is logged in or not, show them
     # either the public timeline or their own private timeline
-    if session.get('logged_in'):
-        return private_timeline()
-    else:
-        return public_timeline()
+    return private_timeline() if session.get('logged_in') else public_timeline()
 
 @app.route('/private/')
 def private_timeline():
